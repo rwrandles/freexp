@@ -1,102 +1,61 @@
-# This repository contains code and data for the Washington State Legislative Explorer Project #
+# This repository contains the replication materials for the project **From Montesquieu to Scalia: Cross-national Separation of Powers and Free Expression** by **Rohnin Randles**
 
-## *Setup*
+## *Setup and Benchmarks*
+
+Original code run on:
+* Windows 10 Pro Version 1803
+* 16.0 GB RAM
+* 2.60GHz CPU, 2 cores
+* R version 3.4.2
 
 `R` packages:
-
-  * httr
-  * XML
   * dplyr
   * tidyr
-  * DBI
-  * RSQLite
-  * lubridate
+  * countrycode
+  * ggplot2
+  * stargazer
+  * maps
 
-## Data availability
+Benchmarks:
+* `code.R`: 145.53 sec
 
-The current version as of 8/11/2019 contains complete data for all legislation, sponsors, committees, and legislative activity in both the 2015-16 and 2017-18 congresses. 
+## *Instructions in Brief*
 
-## Data Architecture
+1. Run `data_processing.R` to compile the datasets in the ./Data/ directory into the cleaned and formatted master data frame to use in the analysis
+2. Run `models.R` to generate the bivariate and multivariate linear regression results, along with the formatted tables
+3. Run `figures.R` to generate all figures, including dependent and independent variable distributions, regression analysis visualizations, and predictive models
 
-The current version as of 8/11/2019 contains a SQLite database named `WashEx-db.sqlite`, which contains all of the data scraped and processed from the Washington State Legislature's [legislative services API](wslwebservices.leg.wa.gov) that is implemented in the project. Below is a description of the contents and architecture of the database.
+## *Data*
 
-## Database tables
+The ./Data/ directory contains the necessary data to replicate the analysis and anlytical figures and tables in the paper. Below, I describe each of the datasets in this directory.
 
-* Legislation: contains summary information on each piece of legislation
-* Sponsors: contains identifying and demographic information on individual legislators
-* Committees: contains information on legislative commitees and their active status
-* Actions: contains information on legislative actions carried out on bills throughout their lifetime
-* Sessions: contains information on start and end dates for legislative sessions in each congress
+* `case_names.csv`: contains a vector of country spelling and formatting based on what is used in `CCP_raw.csv`. Used throughout the code to ensure proper compatibility across all data and files.
+* `CCP_raw.csv`: complete dataset on textual content of the world's constitutions. Contains variables for rights, powers, clauses, etc. Downloaded from the *Comparative Constitutions Project* (CCP).
+* `ccp_rights_list.csv`: vector of select column names from `CCP_raw.csv` related to all variables listed in the Rights section of the CCP codebook.
+* `cepii_data.csv`: contains data on colonial history for various countries. Used in `data_processing.R` to generate covariate for history of British colonization. Downloaded from Centre d'Etudes Prospectives et d'Informations Internationales (CEPII).
+* `conAge.csv`: contains vector of constitutional age based on CCP data. Calculated by subtracting the year 2008 from the year of constitutional creation in `CCP_raw.csv`
+* `countries_map.csv`: manually entered vector of country names used by the maps package in `R`. Used to ensure spelling and compatibility by `figures.R` when generating the IV map visualization.
+* `editCountries.csv`: manually entered dataset containing country names and years for countries who did not have data in `CCP_raw.csv` for the year 2008, but did for other years. Used by `data_processing.R` to substitute data for those different years in `CCP_raw.csv`.
+* `ex_bank.csv`: dataset of manually entered values based on the allocation of central bank appointment power in constitutional texts. Texts provided by the *Constitute Project*
+* `HNL_raw.csv`: complete dataset on legislative powers based on the *Handbook of National Legislatures* by Fish & Kroenig (2009). Downloaded from the faculty website of M. Steven Fish at UC Berkeley.
+* `master_table.csv`: complete dataset of all compiled data from the ./Data/ directory used in the final analysis, figures, and tables. Generated and output by `data_processing.R`.
+* `MIDIP_4.01.csv`: contains data on military conflict for countries around the world. Used in `data_processing.R` to generate covariate for military interaction. MIDIP stands for **M**ilitarized **I**nterstate **Di**s**P**utes; downloaded from Correlates of War (COW).
+* `multivar_model.RData`: RData file containing the multivariate regression model. Generated and output by `models.R`, used in `figures.R` to generate predictive plots.
+* `nat_sec.csv`: dataset of manually entered values based on the allocation of national security council appointment power in constitutional texts. Texts provided by the *Constitute Project*
+* `p4v_2008.csv`: complete dataset for the year 2008 on various governmental indicators. Downloaded from the *Polity Project*.
+* `powers_list.csv`: dataset of manually entered countries whose constitutional texts include mention of competencies of the highest court. Texts provided by the *Constitute Project*
+* `religion_data.csv`: complete dataset on number and percent of religious adherents by country dating back to 1945. Downloaded from Correlates of War (COW).
+* `swiid_data08.csv`: dataset on income inequality providing GINI index scores for nearly all countries in the analysis (123/126). Downloaded from the Standardized World Income Inequality Database (SWIID).
+* `UNHDR_gender.csv`: complete dataset on gender inequality indicators, used by `data_processing.R` to produce gender equality covariate. Downloaded from United Nations Human Development Reports (UNHDR).
+* `V-Dem-CY+Others-v8.csv`: complete dataset from the *Varieties of Democracy* project. Used to provide the dependent variable for the analysis; downloaded from *Varieties of Democracy* (V-Dem).
+* `WDI_military_expend.csv`: complete dataset on military expenditures as % of GDP in constant 2010 USD. Used by `data_processing.R` as a covariate; downloaded from the World Bank's World Development Indicators (WDI).
+* `WDI_national_income.csv`: complete dataset on national income in constant 2010 USD. Used by `data_processing.R` as a covariate; downloaded from the World Bank's World Development Indicators (WDI).
+* `WDI_technology_access.csv`: complete dataset on technology access as the number of cellular phone subscriptions per 100 people. Used by `data_processing.R` as a covariate; downloaded from the World Bank's World Development Indicators (WDI).
 
-### Data
+## *Code*
 
-Below is a description of the variables contained in each table of the SQLite database
+The ./Code/ directory contains the code to replicate the analysis and analytical figures and tables in the paper. Below, I describe each code script in this directory. The ./Figures/ directory contains a copy of each of the figures generated by these scripts; the ./Tables/ directory contains a copy of the LaTeX table code generated by these scripts.
 
-**Legislation**
-
-* BillId: ID of the bill, such as HB 1000 or SSB 5025
-* BillNumber: contains the bill number
-* Biennium: biennium for the congress in which the bill was active
-* LegalTitle: legal title as it appears on the bill at the time of introduction
-* IntroducedDate: date of bill introduction, in the form YYYY-MM-DD
-* Sponsor: name of the primary sponsor of the bill or substitute bill
-* PrimeSponsorID: unique identifier linked to the [same field](#sponsID) in the Sponsors table, unless in the event of a gubernatorial appointment in which case the field will be marked "GOV_YY" with YY representing the year of the biennium
-* LongDescription: description of the bill's contents in relation to the topic and intent of the bill
-* billUrl: link to a PDF of the bill located on the Washington State Legislature's website
-
-**Sponsors**
-
-* repId<a name="sponsID">: unique identifier of the form XXX_YY, where XXX may contain up to five digits and is unique to the legislator across all terms and YY represents the two digits representing the year of the congress for that particular term
-* cong: two-year congress number, representing the *n*th congress since 1889
-* FirstName: legislator's first name
-* LastName: legislator's last name
-* type: type of legislator, where "rep" indicates a representative and "sen" indicates a senator
-* District: legislator's home district
-* Party: legislator's party affiliation
-* Gender: legislator's gender
-* Biennium: biennium for the congress in which the legislator was active
-
-**Committees**
-
-* CommitteeId<a name="commID">: unique alphanumeric identifier to locate the particular committee within and between congresses, of the form XY where X is a letter denoting the biennium and Y is a number representing the committee within the congress
-* Biennium: biennium for the congress in which the commmittee is represented in the API
-* Acronym: committee acronym
-* Agency: either "House" or "Senate"
-* Name: name of committee
-* LongName: combines Agency and Name fields
-* Active: in some cases, the API returns committees that did not exist historically, or were not full standing committees on their own. For this reason, any committee with the Active field marked FALSE is not displayed in the visualization
-
-**Actions**
-
-* BillId: ID of the bill, such as HB 1000 or SSB 5025
-* Biennium: biennium for the congress in which the legislative action took place
-* ActionDate: date on which the legislative action took place
-* SessionAct: alphanumeric ID referencing the [Sessions](#sessDates) table. Takes one of three values - "S1" denotes the first regular session, "S2" denotes the second regular session, and "SS" denotes that the action took place during a special session
-* locId: alphanumeric identifier linked to the [CommitteeId](#commID) field in the Committees table. Used to locate where the action took place
-
-   *Note: there are several locId's that are not paired to a commmittee but are found in the table:
-
-   * HRL: House Rules
-   * SRL: Senate Rules
-   * HFL: House Floor
-   * SFL: Senate Floor
-   * CNF: Conference
-   * SPK: Speaker of the House
-   * PRE: President of the Senate
-   * DSK: Governor's Desk
-   * PVT: Governor Partial Veto
-   * VET: Governor Veto
-   * SGN: Governor Signed
-   * OVR: Veto Override
-   * LAW: Became Law
-
-* HistoryLine: text from the API detailing legislative action
-
-**Sessions**
-
-* biennium: biennium for the congress listed
-* cong: two-year congress number, representing the *n*th congress since 1889
-* StartDate_S1: beginning date of the first regular session of the congress, in the form YYYY-MM-DD
-* EndDate_S1: end date of the first regular session of the congress, in the form YYYY-MM-DD
-* StartDate_S2: beginning date of the second regular session of the congress, in the form YYYY-MM-DD
-* EndDate_S2: end date of the second regular session of the congress, in the form YYYY-MM-DD
+* `data_processing.R`: Code used to compile the datasets for independent, dependent, and control variables located in the ./Data/ directory into one master data table to be used for the analysis. This includes all data required to create regression models and figures used in the final paper, as well as computation of the Separate Powers Index (SPI) and its three sub-indices. Generates and outputs the `master_table.csv` data frame to the ./Data/ directory.
+* `models.R`: Code used to take the data from `master_table.csv` and create summary statistics of both the independent and dependent variables, bivariate and multivariate regression models. Generates and outputs all LaTeX code for the tables used in the final paper in the form of .tex files in the ./Tables/ directory.
+* `figures.R`: Code used to generate all figures from `master_table.csv` used in the final paper. Generates and outputs PDF files to the ./Figures/ directory for independent and dependent variable distributions, hypothesis testing results based on multivariate regression, and predictive models for free expression regressed against the SPI and freedom of expression clauses.
